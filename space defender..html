@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Math Quest: Space Defender</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:radial-gradient(ellipse at bottom,#1b2735 0%,#090a0f 100%);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:15px;color:#fff}
+.game{background:rgba(5,10,30,0.95);border-radius:20px;padding:22px;max-width:520px;width:100%;box-shadow:0 0 40px rgba(0,229,255,0.4);border:2px solid #00e5ff;position:relative}
+.game.boss-mode{border-color:#ff1744}
+.game.hard-mode{border-color:#ff6d00}
+h1{color:#00e5ff;text-align:center;margin-bottom:15px;font-size:1.3em;text-shadow:0 0 10px #00e5ff}
+.game.boss-mode h1{color:#ff1744}
+.game.hard-mode h1{color:#ff6d00}
+.stats{display:flex;justify-content:space-between;margin-bottom:12px;gap:6px;font-size:0.8em}
+.stats div{background:rgba(0,229,255,0.1);padding:6px 8px;border-radius:8px;border:1px solid rgba(0,229,255,0.4);flex:1;text-align:center}
+.stats span{color:#00e5ff;font-weight:bold}
+.game.hard-mode .stats span{color:#ff6d00}
+.progress-section{margin-bottom:10px}
+.progress-label{font-size:0.75em;color:#b0bec5;margin-bottom:5px;display:flex;justify-content:space-between}
+.progress-label strong{color:#00e676}
+.progress-bar{height:10px;background:rgba(0,0,0,0.5);border-radius:6px;overflow:hidden;border:1px solid rgba(0,229,255,0.3)}
+.progress-fill{height:100%;background:linear-gradient(90deg,#00e676,#00e5ff);width:0%;transition:width 0.4s}
+.boss-hp-section{display:none;margin-bottom:10px}
+.boss-hp-section.active{display:block}
+.boss-hp-label{font-size:0.8em;color:#ff1744;margin-bottom:5px;font-weight:bold;text-align:center}
+.boss-hp-bar{height:14px;background:rgba(0,0,0,0.6);border-radius:7px;overflow:hidden;border:2px solid #ff1744}
+.boss-hp-fill{height:100%;background:linear-gradient(90deg,#ff1744,#ff5252);width:100%;transition:width 0.4s}
+.timer-bar{height:8px;background:rgba(0,229,255,0.15);border-radius:5px;overflow:hidden;margin-bottom:12px;border:1px solid rgba(0,229,255,0.3)}
+.timer-fill{height:100%;background:#00e5ff;width:100%;transition:width 0.1s linear}
+.battlefield{display:flex;justify-content:space-between;align-items:center;height:90px;padding:0 15px;margin:10px 0;position:relative;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(0,229,255,0.2);overflow:hidden}
+.game.boss-mode .battlefield{background:rgba(50,0,0,0.5)}
+.ship{font-size:2.5em;z-index:2}
+.monster{font-size:2.8em;transition:transform 0.15s,opacity 0.3s;z-index:2}
+.monster.hit{transform:scale(1.5) rotate(25deg);opacity:0.3}
+.monster.boss{font-size:4.5em}
+.laser{position:absolute;left:60px;top:50%;height:3px;width:0;background:#00e5ff;box-shadow:0 0 12px #00e5ff;border-radius:3px;transform:translateY(-50%);transition:width 0.15s;z-index:1}
+.laser.fire{width:calc(100% - 120px)}
+.question{background:linear-gradient(135deg,#00e5ff,#b388ff);color:#001a2e;font-size:1.6em;font-weight:bold;text-align:center;padding:16px;border-radius:14px;margin:12px 0}
+.game.boss-mode .question{background:linear-gradient(135deg,#ff1744,#ff5252);color:#fff}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.answer-btn{padding:16px;font-size:1.2em;font-weight:bold;border:2px solid #4fc3f7;border-radius:10px;background:rgba(10,25,60,0.9);color:#4fc3f7;cursor:pointer;text-align:center;user-select:none;-webkit-user-select:none}
+.answer-btn:active{transform:scale(0.97)}
+.game.boss-mode .answer-btn{border-color:#ff5252;color:#ff8a80}
+.answer-btn.correct{background:rgba(0,230,118,0.4)!important;border-color:#00e676!important;color:#00e676!important}
+.answer-btn.wrong{background:rgba(255,23,68,0.4)!important;border-color:#ff1744!important;color:#ff1744!important}
+.feedback{text-align:center;margin-top:10px;font-size:1em;font-weight:bold;min-height:24px}
+.start-screen{text-align:center}
+.start-screen p{margin:8px 0;line-height:1.5;color:#b0bec5;font-size:0.9em}
+.start-screen strong{color:#00e5ff}
+.credit{margin-top:12px!important;color:#fdbb2d!important;font-size:0.85em!important}
+.credit strong{color:#fdbb2d!important}
+.mode-buttons{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.mode-btn{padding:18px;font-size:1.05em;font-weight:bold;border:none;border-radius:14px;cursor:pointer;color:#fff;text-align:center;user-select:none;-webkit-user-select:none;transition:transform 0.1s}
+.mode-btn:active{transform:scale(0.96)}
+.mode-btn.easy{background:linear-gradient(135deg,#00e676,#00e5ff);color:#001a2e}
+.mode-btn.hard{background:linear-gradient(135deg,#ff6d00,#ff1744)}
+.mode-btn small{display:block;font-size:0.7em;font-weight:normal;opacity:0.85;margin-top:4px}
+.start-btn{background:linear-gradient(135deg,#00e5ff,#b388ff);color:#001a2e;padding:16px 30px;font-size:1.05em;font-weight:bold;border:none;border-radius:14px;cursor:pointer;margin-top:15px;user-select:none;-webkit-user-select:none}
+.start-btn:active{transform:scale(0.96)}
+.hidden{display:none!important}
+.music-btn{position:absolute;top:10px;right:10px;background:rgba(0,229,255,0.15);color:#00e5ff;border:1px solid #00e5ff;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:0.9em;z-index:10}
+.mode-badge{position:absolute;top:10px;left:10px;padding:4px 9px;border-radius:8px;font-size:0.7em;font-weight:bold}
+.mode-badge.easy{background:rgba(0,230,118,0.2);color:#00e676;border:1px solid #00e676}
+.mode-badge.hard{background:rgba(255,109,0,0.2);color:#ff6d00;border:1px solid #ff6d00}
+.the-end{font-size:2.5em;font-weight:bold;letter-spacing:5px;color:#fff;text-shadow:0 0 20px #00e5ff,0 0 40px #b388ff;margin:20px 0 15px;font-family:Georgia,serif}
+.ending-screen{text-align:center;padding:10px 0}
+.ending-screen h1{color:#fdbb2d;font-size:1.6em;text-shadow:0 0 20px #fdbb2d;margin-bottom:10px}
+.ending-trophy{font-size:4em;margin:12px 0;display:inline-block}
+.ending-stats{background:rgba(0,229,255,0.1);border:1px solid #00e5ff;border-radius:12px;padding:12px;margin:12px 0}
+.ending-stats p{margin:6px 0;color:#b0bec5;font-size:0.9em}
+.ending-stats strong{color:#00e5ff;font-size:1.1em}
+</style>
+</head>
+<body>
+<div class="game" id="game">
+  <button class="music-btn" id="musicBtn">🔊</button>
+  <div class="mode-badge hidden" id="modeBadge"></div>
+
+  <div id="startScreen" class="start-screen">
+    <h1>🚀 SPACE DEFENDER 👾</h1>
+    <p>Armada alien menyerang Bumi!<br>Jawab soal matematika untuk menembak laser!</p>
+    <p>🎯 Kalahkan <strong>15 monster</strong> → BOSS FINAL muncul</p>
+    <p class="credit">✨ Dibuat oleh <strong>Reni Setyowati</strong> ✨</p>
+    <p>Pilih tingkat kesulitan:</p>
+    <div class="mode-buttons">
+      <button class="mode-btn easy" id="btnEasy">🟢 EASY<small>5 nyawa • waktu longgar</small></button>
+      <button class="mode-btn hard" id="btnHard">🔴 HARD<small>3 nyawa • waktu cepat • soal susah</small></button>
+    </div>
+  </div>
+
+  <div id="playScreen" class="hidden">
+    <h1 id="playTitle">⚔️ PERTEMPURAN ANTARIKSA ⚔️</h1>
+    <div class="stats">
+      <div>Skor: <span id="score">0</span></div>
+      <div>Level: <span id="level">1</span></div>
+      <div>Nyawa: <span id="lives">❤️❤️❤️</span></div>
+    </div>
+    <div class="progress-section" id="progressSection">
+      <div class="progress-label"><span>🎯 Monster dibunuh</span><span><strong id="killCount">0</strong> / 15</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="boss-hp-section" id="bossHpSection">
+      <div class="boss-hp-label">💀 BOSS FINAL — HP: <span id="bossHp">5</span> 💀</div>
+      <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="battlefield">
+      <div class="ship">🚀</div>
+      <div class="laser" id="laser"></div>
+      <div class="monster" id="monster">👾</div>
+    </div>
+    <div class="question" id="question">1 + 1 = ?</div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+</div>
+
+<script>
+var score=0,level=1,lives=3,combo=0;
+var kills=0,KILL_TARGET=15;
+var bossMode=false,bossHp=5,BOSS_MAX_HP=5;
+var correctAnswer,timeLeft,timerInterval,totalTime;
+var gameMode='easy';
+var aliens=['👾','👽','🛸','🐙','🤖','💀'];
+var bossEmoji='👹';
+var musicOn=true;
+
+// ============ AUDIO ============
+var audioCtx=null;
+function initAudio(){
+  try{
+    if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+  }catch(e){}
+}
+function beep(f,d,t,v){
+  if(!audioCtx||!musicOn)return;
+  d=d||0.15;t=t||'square';v=v||0.05;
+  try{
+    var o=audioCtx.createOscillator();
+    var g=audioCtx.createGain();
+    o.type=t;o.frequency.value=f;
+    g.gain.setValueAtTime(v,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+d);
+  }catch(e){}
+}
+function sfxBenar(){beep(660,0.1);setTimeout(function(){beep(880,0.15)},100)}
+function sfxSalah(){beep(200,0.2,'sawtooth',0.1)}
+
+// ============ START GAME ============
+function startGame(mode){
+  clearInterval(timerInterval);
+  gameMode=mode;
+  initAudio();
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('playScreen').classList.remove('hidden');
+  document.getElementById('game').classList.remove('boss-mode');
+  var g=document.getElementById('game');
+  var b=document.getElementById('modeBadge');
+  b.classList.remove('hidden');
+  if(mode==='hard'){g.classList.add('hard-mode');b.className='mode-badge hard';b.textContent='🔴 HARD';lives=3}
+  else{g.classList.remove('hard-mode');b.className='mode-badge easy';b.textContent='🟢 EASY';lives=5}
+  document.getElementById('bossHpSection').classList.remove('active');
+  document.getElementById('progressSection').style.display='block';
+  document.getElementById('playTitle').textContent='⚔️ PERTEMPURAN ANTARIKSA ⚔️';
+  score=0;level=1;combo=0;kills=0;bossMode=false;bossHp=BOSS_MAX_HP;
+  updateStats();updateProgress();nextQuestion();
+}
+
+function maxLives(){return gameMode==='hard'?3:5}
+
+function updateStats(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('level').textContent=level;
+  var m=maxLives(),t='';
+  for(var i=0;i<m;i++)t+=i<lives?'❤️':'🖤';
+  document.getElementById('lives').textContent=t;
+}
+
+function updateProgress(){
+  document.getElementById('killCount').textContent=kills;
+  document.getElementById('progressFill').style.width=Math.min(100,(kills/KILL_TARGET)*100)+'%';
+}
+
+function updateBossHp(){
+  document.getElementById('bossHp').textContent=bossHp;
+  document.getElementById('bossHpFill').style.width=(bossHp/BOSS_MAX_HP)*100+'%';
+}
+
+function generateQuestion(){
+  var lvl=bossMode?level+3:level;
+  var isHard=gameMode==='hard';
+  var maxNum=8+lvl*4+(isHard?10:0);
+  var ops=['+','-'];
+  if(isHard){ops=['+','-','×'];if(lvl>=2)ops.push('÷')}
+  else{if(lvl>=3)ops.push('×');if(lvl>=6)ops.push('÷')}
+  var op=ops[Math.floor(Math.random()*ops.length)];
+  var a,b,answer;
+  if(op==='+'){a=Math.floor(Math.random()*maxNum)+1;b=Math.floor(Math.random()*maxNum)+1;answer=a+b}
+  else if(op==='-'){a=Math.floor(Math.random()*maxNum)+10;b=Math.floor(Math.random()*(a-1))+1;answer=a-b}
+  else if(op==='×'){var mA=isHard?15:12,mB=isHard?15:12;a=Math.floor(Math.random()*mA)+2;b=Math.floor(Math.random()*mB)+2;answer=a*b}
+  else{b=Math.floor(Math.random()*11)+2;answer=Math.floor(Math.random()*11)+2;a=b*answer}
+  return {text:a+' '+op+' '+b+' = ?',answer:answer};
+}
+
+function nextQuestion(){
+  clearInterval(timerInterval);
+  if(!bossMode&&kills>=KILL_TARGET){spawnBoss();return}
+  var q=generateQuestion();
+  correctAnswer=q.answer;
+  document.getElementById('question').textContent=q.text;
+  document.getElementById('feedback').textContent='';
+  var m=document.getElementById('monster');
+  m.classList.remove('hit');
+  if(bossMode){m.textContent=bossEmoji;m.classList.add('boss')}
+  else{m.textContent=aliens[Math.floor(Math.random()*aliens.length)];m.classList.remove('boss')}
+  document.getElementById('laser').classList.remove('fire');
+  var opts=[correctAnswer];
+  var attempts=0;
+  while(opts.length<4&&attempts<50){
+    attempts++;
+    var off=Math.floor(Math.random()*20)-10;
+    var fake=correctAnswer+off;
+    if(fake!==correctAnswer&&fake>=0&&opts.indexOf(fake)===-1)opts.push(fake);
+  }
+  while(opts.length<4){opts.push(correctAnswer+opts.length*7)}
+  for(var i=opts.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=opts[i];opts[i]=opts[j];opts[j]=t}
+  var ad=document.getElementById('answers');
+  ad.innerHTML='';
+  opts.forEach(function(ans){
+    var btn=document.createElement('div');
+    btn.className='answer-btn';
+    btn.textContent=ans;
+    btn.addEventListener('click',function(){checkAnswer(btn,ans)});
+    ad.appendChild(btn);
+  });
+  startTimer();
+}
+
+function startTimer(){
+  var base,dec,mn;
+  if(gameMode==='hard'){base=bossMode?10000:8000;dec=700;mn=3500}
+  else{base=bossMode?16000:14000;dec=500;mn=5000}
+  totalTime=Math.max(mn,base-level*dec);
+  timeLeft=totalTime;
+  var f=document.getElementById('timerFill');
+  f.style.width='100%';
+  f.style.background=bossMode?'#ff1744':(gameMode==='hard'?'#ff6d00':'#00e5ff');
+  timerInterval=setInterval(function(){
+    timeLeft-=100;
+    var pct=(timeLeft/totalTime)*100;
+    f.style.width=pct+'%';
+    if(pct<30)f.style.background='#ff1744';
+    else if(pct<60)f.style.background=bossMode?'#ff5252':'#ffeb3b';
+    if(timeLeft<=0){clearInterval(timerInterval);timeOut()}
+  },100);
+}
+
+function timeOut(){
+  combo=0;lives--;sfxSalah();updateStats();
+  document.getElementById('feedback').textContent=bossMode?'💀 Boss menyerang!':'⏰ Waktu habis!';
+  document.getElementById('feedback').style.color='#ffeb3b';
+  if(lives<=0){gameOver();return}
+  setTimeout(nextQuestion,1200);
+}
+
+function checkAnswer(btn,ans){
+  clearInterval(timerInterval);
+  var btns=document.querySelectorAll('.answer-btn');
+  btns.forEach(function(b){b.style.pointerEvents='none'});
+  if(ans===correctAnswer){
+    combo++;
+    var bonus=combo>=3?combo*5:0;
+    var timeBonus=Math.floor(timeLeft/100);
+    var points=10+timeBonus+bonus;
+    if(gameMode==='hard')points=Math.floor(points*1.5);
+    score+=points;
+    document.getElementById('laser').classList.add('fire');
+    sfxBenar();
+    btn.classList.add('correct');
+    setTimeout(function(){document.getElementById('monster').classList.add('hit')},150);
+    var msg='✅ Tepat! +'+points+' poin';
+    if(combo>=3)msg+=' 🔥 Combo x'+combo+'!';
+    document.getElementById('feedback').textContent=msg;
+    document.getElementById('feedback').style.color='#00e676';
+    if(!bossMode){
+      kills++;updateProgress();
+      if(score>level*50)level++;
+    }else{
+      bossHp--;updateBossHp();
+      if(bossHp<=0){updateStats();setTimeout(victory,1200);return}
+    }
+    updateStats();
+    setTimeout(nextQuestion,1100);
+  }else{
+    combo=0;lives--;sfxSalah();
+    btn.classList.add('wrong');
+    btns.forEach(function(b){if(parseInt(b.textContent)===correctAnswer)b.classList.add('correct')});
+    document.getElementById('feedback').textContent='❌ Salah! Jawaban: '+correctAnswer;
+    document.getElementById('feedback').style.color='#ff1744';
+    updateStats();
+    if(lives<=0){gameOver();return}
+    setTimeout(nextQuestion,1500);
+  }
+}
+
+function spawnBoss(){
+  bossMode=true;bossHp=BOSS_MAX_HP;
+  document.getElementById('game').classList.add('boss-mode');
+  document.getElementById('progressSection').style.display='none';
+  document.getElementById('bossHpSection').classList.add('active');
+  document.getElementById('playTitle').textContent='💀 BOSS FINAL 💀';
+  var w=document.createElement('div');
+  w.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,23,68,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;color:#fff;font-weight:bold;text-align:center;font-size:1.6em;padding:20px';
+  w.innerHTML='<div>⚠️ BOSS FINAL MUNCUL ⚠️<br><span style="font-size:3em">👹</span></div>';
+  document.body.appendChild(w);
+  setTimeout(function(){
+    if(w.parentNode)w.parentNode.removeChild(w);
+    updateBossHp();nextQuestion();
+  },2000);
+}
+
+function victory(){
+  clearInterval(timerInterval);
+  sfxBenar();
+  var modeText=gameMode==='hard'?'🔴 HARD':'🟢 EASY';
+  document.getElementById('playScreen').innerHTML=
+    '<div class="ending-screen">'+
+      '<h1>🎉 KEMENANGAN! 🎉</h1>'+
+      '<div class="ending-trophy">🏆</div>'+
+      '<p style="color:#00e676;font-size:1.1em;font-weight:bold">Bumi terselamatkan!</p>'+
+      '<p style="color:#fdbb2d;font-size:0.95em;margin:8px 0">Mode: <strong>'+modeText+'</strong></p>'+
+      '<div class="ending-stats">'+
+        '<p>Skor Akhir: <strong>'+score+'</strong></p>'+
+        '<p>Level Tercapai: <strong>'+level+'</strong></p>'+
+        '<p>Nyawa Tersisa: <strong>'+'❤️'.repeat(lives)+'</strong></p>'+
+      '</div>'+
+      '<div class="the-end">THE END</div>'+
+      '<p class="credit" style="font-size:0.85em;margin-top:15px">✨ Dibuat oleh <strong>Reni Setyowati</strong> ✨</p>'+
+      '<button class="start-btn" id="btnLagi">🔁 COBA LAGI</button>'+
+    '</div>';
+  document.getElementById('btnLagi').addEventListener('click',goToMenu);
+}
+
+function gameOver(){
+  clearInterval(timerInterval);
+  sfxSalah();
+  var modeText=gameMode==='hard'?'🔴 HARD':'🟢 EASY';
+  document.getElementById('playScreen').innerHTML=
+    '<div class="start-screen">'+
+      '<h1 style="color:#ff1744;text-shadow:0 0 15px #ff1744">💀 MISI GAGAL 💀</h1>'+
+      '<div style="font-size:3em;margin:15px 0">🛸</div>'+
+      '<p style="color:#fdbb2d;font-size:0.95em">Mode: <strong>'+modeText+'</strong></p>'+
+      '<p>Skor Akhir: <strong style="color:#00e5ff;font-size:1.3em">'+score+'</strong></p>'+
+      '<p>Level Tercapai: <strong style="color:#00e5ff">'+level+'</strong></p>'+
+      '<p>Monster Dikalahkan: <strong style="color:#00e5ff">'+kills+'</strong></p>'+
+      '<p>'+(score>=300?'🌟 Hampir menang!':score>=150?'👍 Bagus!':'💪 Jangan menyerah!')+'</p>'+
+      '<p class="credit" style="font-size:0.8em;margin-top:15px">✨ Dibuat oleh <strong>Reni Setyowati</strong> ✨</p>'+
+      '<button class="start-btn" id="btnLagi2">🚀 COBA LAGI</button>'+
+    '</div>';
+  document.getElementById('btnLagi2').addEventListener('click',goToMenu);
+}
+
+function goToMenu(){
+  clearInterval(timerInterval);
+  score=0;level=1;combo=0;kills=0;bossMode=false;bossHp=BOSS_MAX_HP;
+  document.getElementById('game').classList.remove('boss-mode');
+  document.getElementById('game').classList.remove('hard-mode');
+  document.getElementById('playScreen').innerHTML=
+    '<h1 id="playTitle">⚔️ PERTEMPURAN ANTARIKSA ⚔️</h1>'+
+    '<div class="stats">'+
+      '<div>Skor: <span id="score">0</span></div>'+
+      '<div>Level: <span id="level">1</span></div>'+
+      '<div>Nyawa: <span id="lives">❤️❤️❤️</span></div>'+
+    '</div>'+
+    '<div class="progress-section" id="progressSection">'+
+      '<div class="progress-label"><span>🎯 Monster dibunuh</span><span><strong id="killCount">0</strong> / 15</span></div>'+
+      '<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>'+
+    '</div>'+
+    '<div class="boss-hp-section" id="bossHpSection">'+
+      '<div class="boss-hp-label">💀 BOSS FINAL — HP: <span id="bossHp">5</span> 💀</div>'+
+      '<div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div>'+
+    '</div>'+
+    '<div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>'+
+    '<div class="battlefield">'+
+      '<div class="ship">🚀</div>'+
+      '<div class="laser" id="laser"></div>'+
+      '<div class="monster" id="monster">👾</div>'+
+    '</div>'+
+    '<div class="question" id="question">1 + 1 = ?</div>'+
+    '<div class="answers" id="answers"></div>'+
+    '<div class="feedback" id="feedback"></div>';
+  document.getElementById('playScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+  document.getElementById('modeBadge').classList.add('hidden');
+}
+
+// ============ EVENT LISTENER (PAKAI INI, BUKAN onclick) ============
+document.getElementById('btnEasy').addEventListener('click',function(){startGame('easy')});
+document.getElementById('btnHard').addEventListener('click',function(){startGame('hard')});
+document.getElementById('musicBtn').addEventListener('click',function(){
+  musicOn=!musicOn;
+  this.textContent=musicOn?'🔊':'🔇';
+});
+</script>
+</body>
+</html>
